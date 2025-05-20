@@ -12,6 +12,7 @@ public class MainWindow extends JFrame {
         add(new GameField());
         setVisible(true);
         setResizable(false);
+
     }
 
     public static void main(String[] args) {

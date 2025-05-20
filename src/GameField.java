@@ -1,59 +1,77 @@
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.util.Random;
 
 /**
- * Created by infuntis on 15/01/17.
+ * Класс игрового поля для игры "Змейка"
  */
-public class GameField extends JPanel implements ActionListener{
-    private final int SIZE = 320;
-    private final int DOT_SIZE = 16;
-    private final int ALL_DOTS = 400;
+public class GameField extends JPanel implements ActionListener {
+
+    private final int SIZE = 320;        // Размер поля
+    private final int DOT_SIZE = 16;     // Размер одной части змейки и яблока
+    private final int ALL_DOTS = 400;    // Максимальное число частей змейки
+
     private Image dot;
     private Image apple;
+
     private int appleX;
     private int appleY;
+
     private int[] x = new int[ALL_DOTS];
     private int[] y = new int[ALL_DOTS];
+
     private int dots;
     private Timer timer;
+
+    // Направление движения змейки
     private boolean left = false;
     private boolean right = true;
     private boolean up = false;
     private boolean down = false;
-    private boolean inGame = true;
 
+    private boolean inGame = true; // Статус игры
 
-    public GameField(){
-        setBackground(Color.black);
+    public GameField() {
+        setBackground(Color.BLACK);
         loadImages();
         initGame();
         addKeyListener(new FieldKeyListener());
         setFocusable(true);
-
     }
 
-    public void initGame(){
+    /**
+     * Инициализация игры
+     */
+    public void initGame() {
         dots = 3;
         for (int i = 0; i < dots; i++) {
-            x[i] = 48 - i*DOT_SIZE;
+            x[i] = 48 - i * DOT_SIZE;
             y[i] = 48;
         }
-        timer = new Timer(250,this);
+        timer = new Timer(250, this);
         timer.start();
         createApple();
     }
 
-    public void createApple(){
-        appleX = new Random().nextInt(19)*DOT_SIZE;
-        appleY = new Random().nextInt(19)*DOT_SIZE;
+    /**
+     * Создание яблока в случайной позиции
+     */
+    public void createApple() {
+        Random rand = new Random();
+        appleX = rand.nextInt(19) * DOT_SIZE;
+        appleY = rand.nextInt(19) * DOT_SIZE;
     }
 
-    public void loadImages(){
+    /**
+     * Загрузка изображений для змейки и яблока
+     */
+    public void loadImages() {
         ImageIcon iia = new ImageIcon("apple.png");
         apple = iia.getImage();
         ImageIcon iid = new ImageIcon("dot.png");
@@ -63,104 +81,129 @@ public class GameField extends JPanel implements ActionListener{
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if(inGame){
-            g.drawImage(apple,appleX,appleY,this);
+        if (inGame) {
+            g.drawImage(apple, appleX, appleY, this);
             for (int i = 0; i < dots; i++) {
-                g.drawImage(dot,x[i],y[i],this);
+                g.drawImage(dot, x[i], y[i], this);
             }
-        } else{
-            String str = "Game Over";
-            //Font f = new Font("Arial",14,Font.BOLD);
-            g.setColor(Color.white);
-            // g.setFont(f);
-            g.drawString(str,125,SIZE/2);
+        } else {
+            showGameOver(g);
         }
     }
 
-    public void move(){
+    /**
+     * Отображение сообщения о завершении игры
+     */
+    private void showGameOver(Graphics g) {
+        String str = "Game Over";
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 24));
+        g.drawString(str, 100, SIZE / 2);
+    }
+
+    /**
+     * Передвижение змейки
+     */
+    public void move() {
         for (int i = dots; i > 0; i--) {
-            x[i] = x[i-1];
-            y[i] = y[i-1];
+            x[i] = x[i - 1];
+            y[i] = y[i - 1];
         }
-        if(left){
+
+        if (left) {
             x[0] -= DOT_SIZE;
         }
-        if(right){
+        if (right) {
             x[0] += DOT_SIZE;
-        } if(up){
+        }
+        if (up) {
             y[0] -= DOT_SIZE;
-        } if(down){
+        }
+        if (down) {
             y[0] += DOT_SIZE;
         }
     }
 
-    public void checkApple(){
-        if(x[0] == appleX && y[0] == appleY){
+    /**
+     * Проверка попадания змейки на яблоко
+     */
+    public void checkApple() {
+        if (x[0] == appleX && y[0] == appleY) {
             dots++;
             createApple();
+            try {
+                playSound("May/cat.wav");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public void checkCollisions(){
-        for (int i = dots; i >0 ; i--) {
-            if(i>4 && x[0] == x[i] && y[0] == y[i]){
+    /**
+     * Проверка столкновений змейки с границами и собой
+     */
+    public void checkCollisions() {
+        // Столкновение с телом
+        for (int i = 1; i < dots; i++) {
+            if (x[0] == x[i] && y[0] == y[i]) {
                 inGame = false;
             }
         }
 
-        if(x[0]>SIZE){
-            inGame = false;
-        }
-        if(x[0]<0){
-            inGame = false;
-        }
-        if(y[0]>SIZE){
-            inGame = false;
-        }
-        if(y[0]<0){
+        // Выход за границы поля
+        if (x[0] >= SIZE || x[0] < 0 || y[0] >= SIZE || y[0] < 0) {
             inGame = false;
         }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if(inGame){
+        if (inGame) {
             checkApple();
             checkCollisions();
             move();
-
         }
         repaint();
     }
 
-    class FieldKeyListener extends KeyAdapter{
+    /**
+     * Обработка нажатий клавиш для управления
+     */
+    class FieldKeyListener extends KeyAdapter {
         @Override
         public void keyPressed(KeyEvent e) {
-            super.keyPressed(e);
             int key = e.getKeyCode();
-            if(key == KeyEvent.VK_LEFT && !right){
+
+            if (key == KeyEvent.VK_LEFT && !right) {
                 left = true;
                 up = false;
                 down = false;
-            }
-            if(key == KeyEvent.VK_RIGHT && !left){
+            } else if (key == KeyEvent.VK_RIGHT && !left) {
                 right = true;
                 up = false;
                 down = false;
-            }
-
-            if(key == KeyEvent.VK_UP && !down){
-                right = false;
+            } else if (key == KeyEvent.VK_UP && !down) {
                 up = true;
-                left = false;
-            }
-            if(key == KeyEvent.VK_DOWN && !up){
                 right = false;
+                left = false;
+            } else if (key == KeyEvent.VK_DOWN && !up) {
                 down = true;
+                right = false;
                 left = false;
             }
         }
     }
 
-
+    /**
+     * Воспроизведение звука
+     */
+    private void playSound(String soundFileName) {
+        try {
+            Clip clip = AudioSystem.getClip();
+            clip.open(AudioSystem.getAudioInputStream(new File(soundFileName)));
+            clip.start();
+        } catch (Exception e) {
+            System.err.println("Ошибка воспроизведения: " + soundFileName);
+        }
+    }
 }
